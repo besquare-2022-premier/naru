@@ -1,1 +1,3 @@
 node_modules
+.naru.config.json
+deployment_logs/*

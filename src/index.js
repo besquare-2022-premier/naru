@@ -1,9 +1,17 @@
+const fs = require("fs");
+const { executeDeployment, loadJson } = require("./deploy");
 const application = require("express")();
 
 application.get("/", function (req, res) {
   res.write("Hurray");
   res.end();
 });
+
+application.use("/webhook", require("./webhooks.js"));
+
+if (!fs.existsSync("./deployment_logs")) {
+  fs.mkdirSync("./deployment_logs");
+}
 
 if (process.env.JEST_WORKER_ID) {
   //export the application as a module when it is being tested
