@@ -3,6 +3,7 @@
  */
 
 const child_process = require("child_process");
+const { existsSync } = require("fs");
 const createLogger = require("./logger");
 const fs = require("fs").promises;
 
@@ -42,6 +43,24 @@ async function executeDeployment(config, base) {
   const log = await createLogger(config.tag ?? "UNKNOWN");
   //change into the deployment
   process.chdir(base ?? "./");
+  //run git pull if the dir refers to a git directory
+  if (existsSync("./.git")) {
+    await log("Executing the git pull");
+    let result = await execPromisified("git pull");
+    if (result.err) {
+      await log("git pull failed!!!", "ERROR");
+    }
+    if (result.stderr) {
+      for (const g of result.stderr.split("\n")) {
+        await log(g, "ERROR");
+      }
+    }
+    for (const g of result.stdout.split("\n")) {
+      await log(g);
+    }
+    process.chdir(pwd);
+    return;
+  }
   //run the command
   await log("Executing the deployment command");
   let result = await execPromisified(config.deploy);

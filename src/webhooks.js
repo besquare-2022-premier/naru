@@ -33,11 +33,6 @@ app.post("/", async function (req, res, next) {
   }
   try {
     const body = JSON.parse(req.body.toString());
-    if (event === "push" && body.ref !== "/refs/heads/master") {
-      logger?.("Dropped a request as the request is not for the master");
-      res.status(200).end("Not for main, bye2");
-      return;
-    }
     const fullname = body.repository.full_name;
     const project = projects.find((z) => z.name === fullname);
     if (!project) {
@@ -45,9 +40,40 @@ app.post("/", async function (req, res, next) {
       res.status(200).end("Not for us, bye2");
       return;
     }
+    //set the event
+    project.event = project.event ?? "push";
     if (event !== (project.event ?? "push")) {
       res.status(200).end("Not expected event bye2");
       return;
+    }
+    switch (event) {
+      case "push":
+        {
+          if (body.ref !== "/refs/heads/master") {
+            logger?.("Dropped a request as the request is not for the master");
+            res.status(200).end("Not for master, bye2");
+            return;
+          }
+        }
+        break;
+      case "workflow_run": {
+        if (
+          body.action !== "completed" ||
+          body.workflow_run.conclusion !== "success"
+        ) {
+          logger?.("Dropped a request as the request from the successfull CI");
+          res.status(200).end("Not a successful run. Bye2");
+          return;
+        }
+        if (body.head_branch !== "master") {
+          logger?.("Dropped a request as the request is not for the master");
+          res.status(200).end("Not for master, bye2");
+          return;
+        }
+      }
+      default:
+        res.status(500).end("Unsupported event");
+        return;
     }
     logger?.(`Deploy started for ${fullname}`);
     //run
