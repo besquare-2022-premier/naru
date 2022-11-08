@@ -12,6 +12,7 @@ createLogger("Webhooks").then((y) => (logger = y));
 app.use(express.raw({ type: "application/json" }));
 app.post("/", async function (req, res, next) {
   const sig = req.get("x-hub-signature-256");
+  const event = req.get("x-github-event");
   if (!sig) {
     logger?.("Dropped a request as the signature is missing");
     res.status(400).end("No signature");
@@ -32,7 +33,7 @@ app.post("/", async function (req, res, next) {
   }
   try {
     const body = JSON.parse(req.body.toString());
-    if (body.ref !== "/refs/heads/master") {
+    if (event === "push" && body.ref !== "/refs/heads/master") {
       logger?.("Dropped a request as the request is not for the master");
       res.status(200).end("Not for main, bye2");
       return;
@@ -44,7 +45,7 @@ app.post("/", async function (req, res, next) {
       res.status(200).end("Not for us, bye2");
       return;
     }
-    if (req.get("x-github-event") !== (project.event ?? "push")) {
+    if (event !== (project.event ?? "push")) {
       res.status(200).end("Not expected event bye2");
       return;
     }
