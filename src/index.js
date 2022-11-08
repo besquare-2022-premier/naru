@@ -1,7 +1,7 @@
 const fs = require("fs");
-const { executeDeployment, loadJson } = require("./deploy");
 const application = require("express")();
 
+application.disable("x-powered-by");
 application.get("/", function (req, res) {
   res.write("Hurray");
   res.end();
