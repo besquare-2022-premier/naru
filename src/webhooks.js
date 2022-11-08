@@ -18,7 +18,8 @@ app.post("/", async function (req, res, next) {
     return;
   }
   const expected =
-    "sha256=" + crypto.createHmac("sha256", secret).update(req.body).digest();
+    "sha256=" +
+    crypto.createHmac("sha256", secret).update(req.body).digest("hex");
   let loops = Math.min(expected.length, sig.length);
   let isValidInv = 0;
   for (let i = 0; i < loops; i++) {
