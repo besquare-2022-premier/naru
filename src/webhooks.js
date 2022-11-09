@@ -91,7 +91,7 @@ app.post("/", async function (req, res, next) {
               res.status(500).end("Cannot get artifacts for it");
               return;
             }
-            let { artefacts: artifacts } = await res2.json();
+            let { artifacts } = await res2.json();
             //check the stuffs
             const entry = artifacts.find((z) => z.name === "build");
             if (!entry) {
