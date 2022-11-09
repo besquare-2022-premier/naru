@@ -57,61 +57,65 @@ app.post("/", async function (req, res, next) {
           }
         }
         break;
-      case "workflow_run": {
-        if (
-          body.action !== "completed" ||
-          body.workflow_run.conclusion !== "success"
-        ) {
-          logger?.("Dropped a request as the request from the successfull CI");
-          res.status(200).end("Not a successful run. Bye2");
-          return;
-        }
-        if (body.workflow_run.head_branch !== "master") {
-          logger?.("Dropped a request as the request is not for the master");
-          res.status(200).end("Not for master, bye2");
-          return;
-        }
-        if (project.download_artefacts) {
-          //sent a request to gh for the stuffs
-          let res = await fetch(body.workflow_run.artefacts_url, {
-            headers: {
-              Authorization: `Basic ${Buffer.from(
-                `${process.env.GIT_USER}:${process.env.GIT_PASS}`
-              ).toString("base64")}`,
-            },
-          });
-          if (!res.ok) {
-            log?.(
-              "Cannot load artefacts info for the project " + project.name,
-              "ERROR"
+      case "action":
+        {
+          if (
+            body.action !== "completed" ||
+            body.workflow_run.conclusion !== "success"
+          ) {
+            logger?.(
+              "Dropped a request as the request from the successfull CI"
             );
-            res.status(500).end("Cannot get artefacts for it");
+            res.status(200).end("Not a successful run. Bye2");
             return;
           }
-          let { artefacts } = await res.json();
-          //check the stuffs
-          const entry = artefacts.find((z) => z.name === "build");
-          if (!entry) {
-            log?.(
-              `The deployment for ${project.name} is terminatted as there is no artefact named build`,
-              "ERROR"
-            );
-            res.status(500).end("Cannot get the required thingy");
+          if (body.workflow_run.head_branch !== "master") {
+            logger?.("Dropped a request as the request is not for the master");
+            res.status(200).end("Not for master, bye2");
             return;
           }
-          let { err } = await execPromisified(
-            `wget -P ${project.path} --user ${process.env.GIT_USER} --pass ${process.env.GIT_PASS} ${entry.archive_download_url}"`
-          );
-          if (err) {
-            log?.(
-              `The deployment for ${project.name} is terminatted as artefact could not be downloded`,
-              "ERROR"
+          if (project.download_artefacts) {
+            //sent a request to gh for the stuffs
+            let res = await fetch(body.workflow_run.artefacts_url, {
+              headers: {
+                Authorization: `Basic ${Buffer.from(
+                  `${process.env.GIT_USER}:${process.env.GIT_PASS}`
+                ).toString("base64")}`,
+              },
+            });
+            if (!res.ok) {
+              log?.(
+                "Cannot load artefacts info for the project " + project.name,
+                "ERROR"
+              );
+              res.status(500).end("Cannot get artefacts for it");
+              return;
+            }
+            let { artefacts } = await res.json();
+            //check the stuffs
+            const entry = artefacts.find((z) => z.name === "build");
+            if (!entry) {
+              log?.(
+                `The deployment for ${project.name} is terminatted as there is no artefact named build`,
+                "ERROR"
+              );
+              res.status(500).end("Cannot get the required thingy");
+              return;
+            }
+            let { err } = await execPromisified(
+              `wget -P ${project.path} --user ${process.env.GIT_USER} --pass ${process.env.GIT_PASS} ${entry.archive_download_url}"`
             );
-            res.status(500).end("Cannot get the required thingy");
-            return;
+            if (err) {
+              log?.(
+                `The deployment for ${project.name} is terminatted as artefact could not be downloded`,
+                "ERROR"
+              );
+              res.status(500).end("Cannot get the required thingy");
+              return;
+            }
           }
         }
-      }
+        break;
       default:
         res.status(500).end("Unsupported event");
         return;
