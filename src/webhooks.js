@@ -66,7 +66,7 @@ app.post("/", async function (req, res, next) {
           res.status(200).end("Not a successful run. Bye2");
           return;
         }
-        if (body.head_branch !== "master") {
+        if (body.workflow_run.head_branch !== "master") {
           logger?.("Dropped a request as the request is not for the master");
           res.status(200).end("Not for master, bye2");
           return;
