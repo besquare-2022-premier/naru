@@ -9,6 +9,7 @@
   "author": "junchan-deriv",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "node-fetch-commonjs": "^3.2.4"
   }
 }
