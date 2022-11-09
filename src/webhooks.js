@@ -74,47 +74,47 @@ app.post("/", async function (req, res, next) {
             res.status(200).end("Not for master, bye2");
             return;
           }
-          if (project.download_artefacts) {
+          if (project.download_artifacts) {
             //sent a request to gh for the stuffs
-            let res = await fetch(body.workflow_run.artefacts_url, {
+            let res2 = await fetch(body.workflow_run.artifacts_url, {
               headers: {
                 Authorization: `Basic ${Buffer.from(
                   `${process.env.GIT_USER}:${process.env.GIT_PASS}`
                 ).toString("base64")}`,
               },
             });
-            if (!res.ok) {
-              log?.(
+            if (!res2.ok) {
+              logger?.(
                 "Cannot load artefacts info for the project " + project.name,
                 "ERROR"
               );
-              res.status(500).end("Cannot get artefacts for it");
+              res.status(500).end("Cannot get artifacts for it");
               return;
             }
-            let { artefacts } = await res.json();
+            let { artefacts: artifacts } = await res2.json();
             //check the stuffs
-            const entry = artefacts.find((z) => z.name === "build");
+            const entry = artifacts.find((z) => z.name === "build");
             if (!entry) {
-              log?.(
-                `The deployment for ${project.name} is terminatted as there is no artefact named build`,
+              logger?.(
+                `The deployment for ${project.name} is terminatted as there is no artifact named build`,
                 "ERROR"
               );
               res.status(500).end("Cannot get the required thingy");
               return;
             }
             let { stderr, stdout, err } = await execPromisified(
-              `wget -P ${project.path} --user ${process.env.GIT_USER} --pass ${process.env.GIT_PASS} ${entry.archive_download_url}"`
+              `wget --auth-no-challenge -P ${project.path} --user=${process.env.GIT_USER} --password=${process.env.GIT_PASS} '${entry.archive_download_url}'`
             );
             if (err) {
-              log?.(
-                `The deployment for ${project.name} is terminatted as artefact could not be downloded`,
+              logger?.(
+                `The deployment for ${project.name} is terminatted as artifact could not be downloded`,
                 "ERROR"
               );
               res.status(500).end("Cannot get the required thingy");
+              stderr.split("\n").forEach((z) => logger?.(z, "ERROR"));
+              stdout.split("\n").forEach((z) => logger?.(z));
               return;
             }
-            stderr.split("\n").forEach((z) => logger?.(z, "ERROR"));
-            stdout.split("\n").forEach((z) => logger?.(z));
           }
         }
         break;
