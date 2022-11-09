@@ -59,7 +59,7 @@ async function executeDeployment(config, base) {
       await log(g);
     }
     process.chdir(pwd);
-    return;
+    if (result.err) return;
   }
   //run the command
   await log("Executing the deployment command");

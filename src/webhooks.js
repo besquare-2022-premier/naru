@@ -119,6 +119,7 @@ app.post("/", async function (req, res, next) {
     logger?.(`Deploy started for ${fullname}`);
     //run
     executeDeployment(await loadJson(project.path), project.path);
+    res.status(200).end("Shecduled");
   } catch (e) {
     next(e);
   }
