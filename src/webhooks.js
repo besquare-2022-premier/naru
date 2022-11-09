@@ -102,7 +102,7 @@ app.post("/", async function (req, res, next) {
               res.status(500).end("Cannot get the required thingy");
               return;
             }
-            let { err } = await execPromisified(
+            let { stderr, stdout, err } = await execPromisified(
               `wget -P ${project.path} --user ${process.env.GIT_USER} --pass ${process.env.GIT_PASS} ${entry.archive_download_url}"`
             );
             if (err) {
@@ -113,6 +113,8 @@ app.post("/", async function (req, res, next) {
               res.status(500).end("Cannot get the required thingy");
               return;
             }
+            stderr.split("\n").forEach((z) => logger?.(z, "ERROR"));
+            stdout.split("\n").forEach((z) => logger?.(z));
           }
         }
         break;
