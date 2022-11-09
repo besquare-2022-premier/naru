@@ -26,9 +26,9 @@ async function loadJson(projectBase) {
  * @param {*} cmd
  * @returns {Promise<{err?:Error:stdout:string,stderr:string}>}
  */
-function execPromisified(cmd) {
+function execPromisified(cmd, options) {
   return new Promise((r) =>
-    child_process.exec(cmd, function (err, stdout, stderr) {
+    child_process.exec(cmd, options, function (err, stdout, stderr) {
       r({ err, stdout, stderr });
     })
   );
@@ -78,4 +78,4 @@ async function executeDeployment(config, base) {
   process.chdir(pwd);
 }
 
-module.exports = { loadJson, executeDeployment };
+module.exports = { loadJson, executeDeployment, execPromisified };

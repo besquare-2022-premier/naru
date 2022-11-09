@@ -4,8 +4,9 @@
 const express = require("express");
 const { secret, projects } = require("./config");
 const crypto = require("crypto");
-const { executeDeployment, loadJson } = require("./deploy");
+const { executeDeployment, loadJson, execPromisified } = require("./deploy");
 const createLogger = require("./logger");
+const { default: fetch } = require("node-fetch-commonjs");
 const app = express.Router();
 let logger;
 createLogger("Webhooks").then((y) => (logger = y));
@@ -69,6 +70,46 @@ app.post("/", async function (req, res, next) {
           logger?.("Dropped a request as the request is not for the master");
           res.status(200).end("Not for master, bye2");
           return;
+        }
+        if (project.download_artefacts) {
+          //sent a request to gh for the stuffs
+          let res = await fetch(body.workflow_run.artefacts_url, {
+            headers: {
+              Authorization: `Basic ${Buffer.from(
+                `${process.env.GIT_USER}:${process.env.GIT_PASS}`
+              ).toString("base64")}`,
+            },
+          });
+          if (!res.ok) {
+            log?.(
+              "Cannot load artefacts info for the project " + project.name,
+              "ERROR"
+            );
+            res.status(500).end("Cannot get artefacts for it");
+            return;
+          }
+          let { artefacts } = await res.json();
+          //check the stuffs
+          const entry = artefacts.find((z) => z.name === "build");
+          if (!entry) {
+            log?.(
+              `The deployment for ${project.name} is terminatted as there is no artefact named build`,
+              "ERROR"
+            );
+            res.status(500).end("Cannot get the required thingy");
+            return;
+          }
+          let { err } = await execPromisified(
+            `wget -P ${project.path} --user ${process.env.GIT_USER} --pass ${process.env.GIT_PASS} ${entry.archive_download_url}"`
+          );
+          if (err) {
+            log?.(
+              `The deployment for ${project.name} is terminatted as artefact could not be downloded`,
+              "ERROR"
+            );
+            res.status(500).end("Cannot get the required thingy");
+            return;
+          }
         }
       }
       default:
