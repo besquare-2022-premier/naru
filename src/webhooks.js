@@ -57,7 +57,7 @@ app.post("/", async function (req, res, next) {
           }
         }
         break;
-      case "action":
+      case "workflow_run":
         {
           if (
             body.action !== "completed" ||
