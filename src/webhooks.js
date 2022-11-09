@@ -50,7 +50,7 @@ app.post("/", async function (req, res, next) {
     switch (event) {
       case "push":
         {
-          if (body.ref !== "/refs/heads/master") {
+          if (body.ref !== "refs/heads/master") {
             logger?.("Dropped a request as the request is not for the master");
             res.status(200).end("Not for master, bye2");
             return;
