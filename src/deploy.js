@@ -58,7 +58,6 @@ async function executeDeployment(config, base) {
     for (const g of result.stdout.split("\n")) {
       await log(g);
     }
-    process.chdir(pwd);
     if (result.err) return;
   }
   //run the command
