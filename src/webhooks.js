@@ -64,7 +64,7 @@ app.post("/", async function (req, res, next) {
             body.workflow_run.conclusion !== "success"
           ) {
             logger?.(
-              "Dropped a request as the request from the successfull CI"
+              "Dropped a request as the request is not from the successfull CI"
             );
             res.status(200).end("Not a successful run. Bye2");
             return;
@@ -75,45 +75,69 @@ app.post("/", async function (req, res, next) {
             return;
           }
           if (project.download_artifacts) {
-            //sent a request to gh for the stuffs
-            let res2 = await fetch(body.workflow_run.artifacts_url, {
-              headers: {
-                Authorization: `Basic ${Buffer.from(
-                  `${process.env.GIT_USER}:${process.env.GIT_PASS}`
-                ).toString("base64")}`,
-              },
-            });
-            if (!res2.ok) {
-              logger?.(
-                "Cannot load artefacts info for the project " + project.name,
-                "ERROR"
+            for (let i = 0; i < 2; i++) {
+              if (i === 1) {
+                await new Promise((r) => {
+                  let id = setTimeout(() => {
+                    r();
+                    clearTimeout(id);
+                  }, 250);
+                });
+              }
+              //sent a request to gh for the stuffs
+              let res2 = await fetch(body.workflow_run.artifacts_url, {
+                headers: {
+                  Authorization: `Basic ${Buffer.from(
+                    `${process.env.GIT_USER}:${process.env.GIT_PASS}`
+                  ).toString("base64")}`,
+                },
+              });
+              if (!res2.ok) {
+                logger?.(
+                  "Cannot load artefacts info for the project " + project.name,
+                  "ERROR"
+                );
+                if (i == 1) {
+                  res.status(500).end("Cannot get artifacts for it");
+                  return;
+                } else {
+                  continue;
+                }
+              }
+              let { artifacts } = await res2.json();
+              //check the stuffs
+              const entry = artifacts.find((z) => z.name === "build");
+              if (!entry) {
+                logger?.(
+                  `The deployment for ${project.name} is terminatted as there is no artifact named build`,
+                  "ERROR"
+                );
+                if (i == 1) {
+                  res.status(500).end("Cannot get the required thingy");
+                  return;
+                } else {
+                  continue;
+                }
+              }
+              let { stderr, stdout, err } = await execPromisified(
+                `wget --auth-no-challenge -P ${project.path} --user=${process.env.GIT_USER} --password=${process.env.GIT_PASS} '${entry.archive_download_url}'`
               );
-              res.status(500).end("Cannot get artifacts for it");
-              return;
-            }
-            let { artifacts } = await res2.json();
-            //check the stuffs
-            const entry = artifacts.find((z) => z.name === "build");
-            if (!entry) {
-              logger?.(
-                `The deployment for ${project.name} is terminatted as there is no artifact named build`,
-                "ERROR"
-              );
-              res.status(500).end("Cannot get the required thingy");
-              return;
-            }
-            let { stderr, stdout, err } = await execPromisified(
-              `wget --auth-no-challenge -P ${project.path} --user=${process.env.GIT_USER} --password=${process.env.GIT_PASS} '${entry.archive_download_url}'`
-            );
-            if (err) {
-              logger?.(
-                `The deployment for ${project.name} is terminatted as artifact could not be downloded`,
-                "ERROR"
-              );
-              res.status(500).end("Cannot get the required thingy");
-              stderr.split("\n").forEach((z) => logger?.(z, "ERROR"));
-              stdout.split("\n").forEach((z) => logger?.(z));
-              return;
+              if (err) {
+                logger?.(
+                  `The deployment for ${project.name} is terminatted as artifact could not be downloded`,
+                  "ERROR"
+                );
+                if (i == 1) {
+                  res.status(500).end("Cannot get the required thingy");
+                  stderr.split("\n").forEach((z) => logger?.(z, "ERROR"));
+                  stdout.split("\n").forEach((z) => logger?.(z));
+                  return;
+                } else {
+                  continue;
+                }
+              } else {
+                break; //we are done so lets break
+              }
             }
           }
         }
@@ -125,7 +149,7 @@ app.post("/", async function (req, res, next) {
     logger?.(`Deploy started for ${fullname}`);
     //run
     executeDeployment(await loadJson(project.path), project.path);
-    res.status(200).end("Shecduled");
+    res.status(200).end("Scheduled");
   } catch (e) {
     next(e);
   }
